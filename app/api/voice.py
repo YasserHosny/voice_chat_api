@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.services.voice_service import process_voice_file
-from docling.document_converter import DocumentConverter
+# from docling.document_converter import DocumentConverter
 
 voice_bp = Blueprint('voice_bp', __name__)
 
