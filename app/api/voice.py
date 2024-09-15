@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, url_for
 from app.services.voice_service import process_voice_file
 import requests
 import os
@@ -98,8 +98,12 @@ def send_pdf():
         print(f"Error sending PDF to external API: {str(e)}")
         return jsonify({"error": f"Error occurred: {str(e)}"}), 500
     
+voice_bp = Blueprint('voice_bp', __name__)
 
-# New endpoint for using the marker tool
+# Ensure the 'result' folder exists in your app
+RESULT_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'result')
+os.makedirs(RESULT_FOLDER, exist_ok=True)
+
 @voice_bp.route('/marker-pdf', methods=['POST'])
 def marker_pdf():
     print("Received request to process PDF using marker tool.")
@@ -114,9 +118,6 @@ def marker_pdf():
 
     # Save the uploaded file to the 'result' folder
     try:
-        RESULT_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'result')
-        os.makedirs(RESULT_FOLDER, exist_ok=True)
-
         input_pdf_path = os.path.join(RESULT_FOLDER, file.filename)
         output_folder = os.path.join(RESULT_FOLDER, 'output')
 
@@ -137,12 +138,31 @@ def marker_pdf():
         ]
         print(f"Running command: {' '.join(command)}")
 
-         # Execute the command
+        # Execute the command
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Capture output and errors
         if result.returncode == 0:
             print("Marker tool executed successfully.")
+            
+            # Find the .md file in the output folder
+            md_file_path = None
+            for root, dirs, files in os.walk(output_folder):
+                for file in files:
+                    if file.endswith('.md'):
+                        md_file_path = os.path.join(root, file)
+                        break
+
+            # Check if the .md file was found
+            if md_file_path and os.path.exists(md_file_path):
+                # Move the .md file to the result folder for easier access
+                md_filename = os.path.basename(md_file_path)
+                markdown_output_path = os.path.join(RESULT_FOLDER, md_filename)
+                os.rename(md_file_path, markdown_output_path)
+                print(f"Markdown file moved to {markdown_output_path}")
+            else:
+                print("Markdown file not found.")
+                markdown_output_path = None
             
             # Create a zip archive of the output folder
             zip_filename = "output.zip"
@@ -156,13 +176,20 @@ def marker_pdf():
             
             zip_buffer.seek(0)
 
-            # Return the zip file
-            return send_file(
-                zip_buffer,
-                mimetype='application/zip',
-                as_attachment=True,
-                download_name=zip_filename
-            )
+            # Save the zip file locally so that the user can download it
+            zip_download_path = os.path.join(RESULT_FOLDER, zip_filename)
+            with open(zip_download_path, 'wb') as f:
+                f.write(zip_buffer.getvalue())
+
+            # Create URLs for downloading the zip and markdown files
+            zip_download_url = url_for('voice_bp.download_zip', filename=zip_filename, _external=True)
+            markdown_url = url_for('voice_bp.download_md', filename=md_filename, _external=True) if markdown_output_path else None
+
+            # Return the URLs for both the markdown file and zip file
+            return jsonify({
+                "markdown_url": markdown_url,  # Download link for the .md file
+                "zip_download_url": zip_download_url  # Download link for the zip file
+            })
 
         else:
             print(f"Marker tool failed with error: {result.stderr.decode('utf-8')}")
@@ -171,3 +198,25 @@ def marker_pdf():
     except Exception as e:
         print(f"Error processing PDF with marker tool: {str(e)}")
         return jsonify({"error": f"Error occurred: {str(e)}"}), 500
+
+@voice_bp.route('/download-zip/<filename>', methods=['GET'])
+def download_zip(filename):
+    try:
+        zip_path = os.path.join(RESULT_FOLDER, filename)
+        if os.path.exists(zip_path):
+            return send_file(zip_path, mimetype='application/zip', as_attachment=True, download_name=filename)
+        else:
+            return jsonify({"error": "File not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@voice_bp.route('/download-md/<filename>', methods=['GET'])
+def download_md(filename):
+    try:
+        md_path = os.path.join(RESULT_FOLDER, filename)
+        if os.path.exists(md_path):
+            return send_file(md_path, mimetype='text/markdown', as_attachment=False)
+        else:
+            return jsonify({"error": "File not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
