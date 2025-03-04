@@ -98,8 +98,6 @@ def send_pdf():
         print(f"Error sending PDF to external API: {str(e)}")
         return jsonify({"error": f"Error occurred: {str(e)}"}), 500
     
-voice_bp = Blueprint('voice_bp', __name__)
-
 # Ensure the 'result' folder exists in your app
 RESULT_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'result')
 os.makedirs(RESULT_FOLDER, exist_ok=True)
