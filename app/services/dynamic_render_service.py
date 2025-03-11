@@ -9,3 +9,15 @@ def process_chat_text(chat_text):
         "chat_text": chat_text,
         "response": response
     }
+
+def extract_life_cycle_status(response):
+        # Extract the value of the answer from the response
+        lifeCycleStatus = response.split(":")[-1].strip()
+        print("LifeCycleStatus:", lifeCycleStatus)
+        return lifeCycleStatus
+
+def extract_json_response(response):
+    # Extract the value of the answer from the response
+    json_response = response.split("```json")[-1].strip().removesuffix("```")
+    print("JSON Response:", json_response)
+    return json_response
