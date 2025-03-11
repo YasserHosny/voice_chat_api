@@ -110,7 +110,7 @@ def transcribe_audio(file):
     'voice_chat_api/requirements.txt': '''\
 Flask==2.0.2
 openai==1.35.7
-SpeechRecognition==3.8.1
+SpeechRecognition==3.14.1
 '''
 }
 
