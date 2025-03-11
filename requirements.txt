@@ -1,5 +1,5 @@
 Flask==2.0.2
-openai==1.35.7
+openai==1.65.5
 SpeechRecognition==3.14.1
 Werkzeug==2.0.2
 requests==2.31.0
