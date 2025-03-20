@@ -1,8 +1,12 @@
 from flask import Flask
+from flask_cors import CORS
 
 def create_app():
     print("Creating Flask application...")
     app = Flask(__name__)
+
+    # Allow CORS for Angular running on localhost:4200
+    CORS(app, origins=["http://localhost:4200"])
 
     from app.api.dynamic_render import dynamic_render_bp
     from app.api.voice import voice_bp

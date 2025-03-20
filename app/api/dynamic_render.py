@@ -17,47 +17,138 @@ Given the following user question:
 
 **User Question:** "{user_question}"  
 
-Ingore any previous conversation, then classify it into one of the following business domains and extract the relevant parameters:
+Ignore any previous conversation, then classify it into one of the following business domains and extract the relevant parameters:
 
-1. **Product Portfolio**: The user is asking about drawing a product categories chart for the "product portfolio" domain.
-   - **Filters:**
-     - **Life Cycle Status**: Extract values from ["Active", "EOL", "Unconfirmed"]. If multiple values are mentioned, include them in a list.
-     - **RoHS Status**: Extract values from ["Compliant", "Not Compliant", "Unknown"]. If multiple values are mentioned, include them in a list.
-   - **Scope**: Extract if the user requests "Top 10" or "All" categories.
+---
 
-2. **Cross Summary**: The user is asking about drawing a product categories chart for the "cross summary" domain.
-   - **Filters:**
-     - **Life Cycle Status**: Extract one of ["Active_To_Active", "EOL", "Active_To_Obsolete", "Obsolete_To_Active", "ALL"].
-   - **Scope**: Extract if the user requests "Top 10" or "All" categories.
+1. **Product Portfolio**: The user is asking about a product portfolio query.
+   - **Business Functions:**
+     - **Total Parts**: If the user asks for the total number of parts.
+     - **Product Categories**: If the user asks for product categories.
+       - **Scope**: Extract if the user requests "Top 10" or "All" categories.
+     - **Lifecycle**: If the user asks about product lifecycle statistics.
+     - **RoHS**: If the user asks about RoHS compliance.
+
+2. **Obsolescence**: The user is asking about product obsolescence trends or statistics.
+   - **Business Functions:**
+     - **Time Trend**: If the user asks for monthly obsolescence trends.
+     - **Statistics**: If the user asks for obsolescence statistics.
+
+3. **Cross Summary**: The user is asking about cross-analysis comparisons.
+   - **Business Functions:**
+     - **Product Categories**: If the user asks about competitive analysis in product categories.
+       - **Scope**: Extract if the user requests "Top 10" or "All" categories.
+     - **Relations by Competitor**: If the user asks about competitor cross-references.
+
+4. **Market Performance**: The user is asking about market performance metrics.
+   - **Business Functions:**
+     - **Best Competitive Performance**: If the user asks about the best-performing competitors.
+     - **Price Comparison**: If the user asks about price differences across suppliers.
+     - **Lead Time**: If the user asks about supplier lead times.
+     - **Inventory Comparison**: If the user asks about supplier inventory levels.
+
+---
 
 Return the result **ONLY** in the following JSON format without additional explanations:
 
 **Example 1:**
 ```json
-{{ 
-    "businessDomain": "product_portfolio", 
-    "rohsStatuses": [
-        "Compliant",
-        "Not Compliant",
-        "Unknown"
-    ],
-    "lifecycleStatuses": [
-        "Active",
-        "EOL",
-        "Unconfirmed"
-    ],
-    "Scope": "Top 10"
-}}
-Example 2:
 {{
-    "businessDomain": "cross_summary",  
-    "lifeCycleStatus": "Active_To_Active",
-    "Scope": "All categories"
+    "businessDomain": {{
+        "name": "product_portfolio",
+        "businessFunction": {{
+            "name": "product_categories",
+            "Scope": "Top 10"
+        }}
+    }},
+    "chartConfig": {{
+        "chartType": "bar",
+        "chartGap": 3,
+        "chartSpacing": 0.5,
+        "showLegend": false,
+        "showTooltip": true,
+        "chartStyle": {{
+            "height": "400px",
+            "width": "100%"
+        }}
+    }}
 }}
-If the question does not match any of the two domains, respond with:
+```
+
+**Example 2:**
+```json
+{{
+    "businessDomain": {{
+        "name": "obsolescence",
+        "businessFunction": {{
+            "name": "time_trend"
+        }}
+    }},
+    "chartConfig": {{
+        "chartType": "line",
+        "chartGap": 2,
+        "chartSpacing": 0.7,
+        "showLegend": true,
+        "showTooltip": true,
+        "chartStyle": {{
+            "height": "500px",
+            "width": "100%"
+        }}
+    }}
+}}
+```
+
+**Example 3:**
+```json
+{{
+    "businessDomain": {{
+        "name": "cross_summary",
+        "businessFunction": {{
+            "name": "relations_by_competitor"
+        }}
+    }},
+    "chartConfig": {{
+        "chartType": "bar",
+        "chartGap": 3,
+        "chartSpacing": 0.5,
+        "showLegend": false,
+        "showTooltip": true,
+        "chartStyle": {{
+            "height": "400px",
+            "width": "100%"
+        }}
+    }}
+}}
+```
+
+**Example 4:**
+```json
+{{
+    "businessDomain": {{
+        "name": "market_performance",
+        "businessFunction": {{
+            "name": "price"
+        }}
+    }},
+    "chartConfig": {{
+        "chartType": "line",
+        "chartGap": 2,
+        "chartSpacing": 0.7,
+        "showLegend": true,
+        "showTooltip": true,
+        "chartStyle": {{
+            "height": "500px",
+            "width": "100%"
+        }}
+    }}
+}}
+
+If the question does not match any of the categories, respond with:
+```json
 {{
     "error": "Unrecognized question format."
 }}
+```
 """
         formatted_prompt = prompt.format(user_question=chat_text)
 
