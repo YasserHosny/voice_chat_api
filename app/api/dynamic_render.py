@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, Response
 from app.services.dynamic_render_service import process_chat_text, extract_life_cycle_status, extract_json_response
+import json
 
 dynamic_render_bp = Blueprint('dynamic_render', __name__)
 
@@ -25,7 +26,8 @@ Ignore any previous conversation, then classify it into one of the following bus
    - **Business Functions:**
      - **Total Parts**: If the user asks for the total number of parts.
      - **Product Categories**: If the user asks for product categories.
-       - **Scope**: Extract if the user requests "Top 10" or "All" categories.
+       - **Scope**: Extract if the user requests specific top count "Top" or "All" categories.
+       - **scopeCount**: Extract count number of categories if Scope is Top count.
      - **Lifecycle**: If the user asks about product lifecycle statistics.
      - **RoHS**: If the user asks about RoHS compliance.
 
@@ -37,7 +39,7 @@ Ignore any previous conversation, then classify it into one of the following bus
 3. **Cross Summary**: The user is asking about cross-analysis comparisons.
    - **Business Functions:**
      - **Product Categories**: If the user asks about competitive analysis in product categories.
-       - **Scope**: Extract if the user requests "Top 10" or "All" categories.
+       - **Scope**: Extract if the user requests specific top count "Top" or "All" categories.
      - **Relations by Competitor**: If the user asks about competitor cross-references.
 
 4. **Market Performance**: The user is asking about market performance metrics.
@@ -58,7 +60,8 @@ Return the result **ONLY** in the following JSON format without additional expla
         "name": "product_portfolio",
         "businessFunction": {{
             "name": "product_categories",
-            "Scope": "Top 10"
+            "Scope": "Top",
+            "scopeCount": 10
         }}
     }},
     "chartConfig": {{
@@ -76,6 +79,28 @@ Return the result **ONLY** in the following JSON format without additional expla
 ```
 
 **Example 2:**
+```json
+{{
+    "businessDomain": {{
+        "name": "product_portfolio",
+        "businessFunction": {{
+            "name": "rohs",
+        }}
+    }},
+    "chartConfig": {{
+        "chartGap": 3,
+        "chartSpacing": 0.5,
+        "showLegend": false,
+        "showTooltip": true,
+        "chartStyle": {{
+            "height": "400px",
+            "width": "100%"
+        }}
+    }}
+}}
+```
+
+**Example 3:**
 ```json
 {{
     "businessDomain": {{
@@ -98,7 +123,7 @@ Return the result **ONLY** in the following JSON format without additional expla
 }}
 ```
 
-**Example 3:**
+**Example 4:**
 ```json
 {{
     "businessDomain": {{
@@ -121,7 +146,7 @@ Return the result **ONLY** in the following JSON format without additional expla
 }}
 ```
 
-**Example 4:**
+**Example 5:**
 ```json
 {{
     "businessDomain": {{
@@ -152,14 +177,19 @@ If the question does not match any of the categories, respond with:
 """
         formatted_prompt = prompt.format(user_question=chat_text)
 
-        print("Chatgpt Prompt:", formatted_prompt)
+        print("LLM Prompt:", formatted_prompt)
 
         # Process chat text using the service
-        result = process_chat_text(formatted_prompt)
-        print("Chatgpt Result:", result)
+        result = process_chat_text(formatted_prompt, provider="bedrock")
+        print("LLM Result:", result)
 
         # Extract the value of the answer from the result
         response = extract_json_response(result['response'])
-
-        # Ensure response is a valid JSON object
-        return Response(response, mimetype='application/json')
+        
+        # Ensure response is returned as a JSON string for Flask Response
+        if isinstance(response, dict):
+            return Response(json.dumps(response), mimetype='application/json')
+        elif isinstance(response, str):
+            return Response(response, mimetype='application/json')
+        else:
+            return jsonify({'error': 'Unexpected response type', 'type': str(type(response))}), 500
